@@ -7,16 +7,19 @@
 #include <stdint.h>
 #include <string.h>
 
-/* Декодування UTF-8 символу в Unicode codepoint */
+// Функція для конвертації UTF-8 послідовності у Unicode кодпоінт
 const char* utf8_to_codepoint(const char* str, uint32_t* codepoint) {
     unsigned char c = (unsigned char)*str;
     if (c < 0x80) {
+        // 1-байтний символ ASCII (0xxxxxxx)
         *codepoint = c;
         return str + 1;
     } else if ((c & 0xE0) == 0xC0) {
+        // 2-байтний UTF-8 символ (110xxxxx 10xxxxxx)
         *codepoint = ((c & 0x1F) << 6) | (str[1] & 0x3F);
         return str + 2;
     } else if ((c & 0xF0) == 0xE0) {
+        // 3-байтний UTF-8 символ (1110xxxx 10xxxxxx 10xxxxxx)
         *codepoint = ((c & 0x0F) << 12) | ((str[1] & 0x3F) << 6) | (str[2] & 0x3F);
         return str + 3;
     } else {
@@ -26,10 +29,12 @@ const char* utf8_to_codepoint(const char* str, uint32_t* codepoint) {
 }
 
 /* Копіюємо пікселі гліфа з FreeType Bitmap у бітовий буфер */
-void blit_glyph(uint8_t *bitmap, int bitmap_width, int bitmap_height,
-                FT_Bitmap *bmp, int pen_x, int pen_y, int bitmap_left, int bitmap_top)
+void blit_glyph(uint8_t* bitmap, int bitmap_width, int bitmap_height,
+                FT_Bitmap* bmp, int pen_x, int pen_y, int bitmap_left, int bitmap_top)
 {
+    // ttf рендерить у 1-бітному форматі в байтових рядках
     int bytes_per_row = (bitmap_width + 7) / 8;
+    // Проходимо по пікселях зображення гліфа
     for (int y = 0; y < bmp->rows; y++) {
         int dest_y = pen_y - bitmap_top + y;
         if (dest_y < 0 || dest_y >= bitmap_height) continue;
@@ -53,7 +58,7 @@ int find_bitmap_max_y(const uint8_t* bitmap, int bitmap_width, int bitmap_height
         for (int byte_idx = y * bytes_per_row; byte_idx < (y + 1) * bytes_per_row; byte_idx++) {
             if (bitmap[byte_idx] != 0) {
                 return y;
-            }
+        }
         }
     }
     return 0; // Якщо порожній
@@ -69,28 +74,31 @@ void print_bitmap(const uint8_t *bitmap, int bitmap_width, int bitmap_height)
             int bit_idx = 7 - (x % 8);
             putchar((bitmap[byte_idx] & (1 << bit_idx)) ? '#' : ' ');
         }
-        putchar('\n');
+        putchar('\n'); // Перехід на новий рядок після кожного рядка пікселів
     }
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     if (argc < 6) {
         printf("Usage: %s <font.ttf> <glyph_width_px> <glyph_height_px> <max_width_px> <text>\n", argv[0]);
         return 1;
     }
 
-    const char *fontfile = argv[1];
+    // Отримуємо параметри командного рядка
+    const char* fontfile = argv[1];
     int glyph_width = atoi(argv[2]);
     int glyph_height = atoi(argv[3]);
     int max_width_px = atoi(argv[4]);
-    const char *text = argv[5];
+    const char* text = argv[5];
 
+    // Ініціалізація FreeType
     FT_Library ft;
     if (FT_Init_FreeType(&ft)) {
         fprintf(stderr, "Failed to init FreeType\n");
         return 1;
     }
 
+    // Завантаження шрифту
     FT_Face face;
     if (FT_New_Face(ft, fontfile, 0, &face)) {
         fprintf(stderr, "Failed to load font: %s\n", fontfile);
@@ -98,11 +106,12 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    // Встановлення розміру гліфів (в пікселях)
     FT_Set_Pixel_Sizes(face, glyph_width, glyph_height);
 
     int bytes_per_row = (max_width_px + 7) / 8;
     int bitmap_height = glyph_height * 20; // Досить для ~20 рядків тексту
-    uint8_t *bitmap = calloc(bitmap_height * bytes_per_row, 1);
+    uint8_t* bitmap = calloc(bitmap_height * bytes_per_row, 1);
     if (!bitmap) {
         fprintf(stderr, "Out of memory\n");
         FT_Done_Face(face);
@@ -110,22 +119,23 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    // 2. Другий прохід: рендер символів у bitmap
     int pen_x = 0;
-    int pen_y = glyph_height; // baseline першого рядка
-    const char *p = text;
+    int pen_y = glyph_height; // починаємо з першого рядка, y — це baseline шрифту
+
+    const char* p = text;
     uint32_t codepoint;
 
     while (*p) {
         if (*p == '\n') {
-            pen_x = 0;
-            pen_y += glyph_height;
+            pen_x = 0;           // перехід в початок нового рядка
+            pen_y += glyph_height; // зміщення вниз
             p++;
             continue;
         }
 
         p = utf8_to_codepoint(p, &codepoint);
-        if (codepoint == 0)
-            continue;
+        if (codepoint == 0) continue;
 
         if (FT_Load_Char(face, codepoint, FT_LOAD_RENDER)) {
             fprintf(stderr, "Failed to load char U+%04X\n", codepoint);
@@ -134,6 +144,7 @@ int main(int argc, char **argv) {
 
         FT_GlyphSlot g = face->glyph;
 
+        // Якщо текст виходить за межі max ширини — переносимо на новий рядок
         if (pen_x + (g->advance.x >> 6) > max_width_px) {
             pen_x = 0;
             pen_y += glyph_height;
@@ -143,15 +154,18 @@ int main(int argc, char **argv) {
             break;
         }
 
+        // Відрисовуємо гліф в bitmap у правильній позиції
         blit_glyph(bitmap, max_width_px, bitmap_height,
                    &g->bitmap, pen_x, pen_y, g->bitmap_left, g->bitmap_top);
 
+        // Зрушуємо pen_x на ширину гліфа для наступного символу
         pen_x += g->advance.x >> 6;
     }
 
     int max_y = find_bitmap_max_y(bitmap, max_width_px, bitmap_height);
     print_bitmap(bitmap, max_width_px, max_y + 1);
 
+    // Звільняємо ресурси
     free(bitmap);
     FT_Done_Face(face);
     FT_Done_FreeType(ft);
