@@ -1,0 +1,47 @@
+# SVG to RasterFont Converter
+
+Ця утиліта:
+✅ Конвертує SVG у бінарний RasterFont формат
+✅ Підтримує пакетну обробку директорій
+✅ Сортує файли у правильному порядку (0-9, a-z, A-Z)
+✅ Генерує сумісний код з іншими генераторами
+✅ Має гнучкі налаштування розміру гліфів
+
+# -------------------------------
+Залежності:
+
+## Встановлення залежностей:
+```bash
+sudo apt-get install librsvg2-dev libcairo2-dev libglib2.0-dev
+
+```
+# -------------------------------
+Збірка:
+make
+# -------------------------------
+
+Виконання:
+# -------------------------------
+chmod +x svg2font.sh
+./svg2font.sh myicons ./svg_icons 24 24
+# -------------------------------
+Пакетна обробка директорії:
+# ./build/app/application.elf -w 24 -h 24 myicons ./svg_icons
+./build/app/application.elf -w 16 -h 16 myicons ./svg_icons
+# -------------------------------
+
+Помилки:
+# -------------------------------
+Проблема у версії бібліотеки librsvg.
+У старіших версіях використовується rsvg_handle_free, а у новіших (2.52+) — rsvg_handle_unref.
+
+Проблема у версії бібліотеки librsvg. У старіших версіях використовується rsvg_handle_free, а у новіших (2.52+) — rsvg_handle_unref.
+
+# sed -i 's/rsvg_handle_unref/rsvg_handle_free/g' svg_generator/svg_to_raster.c
+
+залежно від версії встановіть виклик...
+// або:
+rsvg_handle_unref(handle);
+// або:
+rsvg_handle_free(handle);
+
