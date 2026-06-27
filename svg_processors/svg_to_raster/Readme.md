@@ -20,14 +20,19 @@ sudo apt-get install librsvg2-dev libcairo2-dev libglib2.0-dev
 make
 # -------------------------------
 
+# -------------------------------
 Виконання:
-# -------------------------------
-chmod +x svg2font.sh
-./svg2font.sh myicons ./svg_icons 24 24
-# -------------------------------
 Пакетна обробка директорії:
+# -------------------------------
 # ./build/app/application.elf -w 24 -h 24 myicons ./svg_icons
 ./build/app/application.elf -w 16 -h 16 myicons ./svg_icons
+# -------------------------------
+
+# -------------------------------
+Виконання через скрипт:
+# -------------------------------
+chmod +x svg2font.sh
+./svg2font.sh myicons ./svg_icons 16 16
 # -------------------------------
 
 Помилки:
