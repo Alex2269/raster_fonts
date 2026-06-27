@@ -135,8 +135,8 @@ sudo apt install libraylib-dev libglfw3-dev libgl1-mesa-dev
 ### 1. Клонувати репозиторій
 
 ```bash
-git clone https://github.com/yourusername/raster-font-tools.git
-cd raster-font-tools
+git clone https://github.com/Alex2269/raster_fonts.git
+
 ```
 
 ### 2. Зібрати всі інструменти
